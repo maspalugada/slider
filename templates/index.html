@@ -2,34 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - CSSD SmartTrack</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f8f9fa; }
-        .header { background-color: #343a40; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header h1 { margin: 0; font-size: 1.5rem; }
-        .header .user-info a { color: #ffc107; text-decoration: none; margin-left: 1rem; }
-        .container { padding: 2rem; }
-        .dashboard-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-        .summary-card { background-color: #fff; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; }
-        .summary-card h3 { margin: 0 0 0.5rem 0; color: #6c757d; }
-        .summary-card p { font-size: 2rem; font-weight: bold; margin: 0; color: #007bff; }
-        table { width: 100%; border-collapse: collapse; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
-        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #dee2e6; }
-        th { background-color: #e9ecef; }
-        .flash-messages { list-style: none; padding: 0; margin-bottom: 1rem; }
-        .flash-messages li { padding: 1rem; border: 1px solid; border-radius: 4px; }
-        .flash-messages .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
-        .flash-messages .error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
-        .flash-messages .info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
-        .action-form-container { margin-top: 2rem; padding: 1.5rem; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-radius: 8px; }
-        .action-button { background-color: #28a745; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; }
-        .action-button:hover { background-color: #218838; }
-        .action-button.view { background-color: #17a2b8; }
-        .action-button.view:hover { background-color: #138496; }
-        .action-button.export { background-color: #ffc107; color: #212529; }
-        .action-button.export:hover { background-color: #e0a800; }
-        .status-update-form button { margin-right: 5px; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="header">
@@ -84,10 +59,10 @@
             <tbody>
                 {% for s in sets %}
                 <tr>
-                    <td>{{ s.id }}</td>
-                    <td>{{ s.name }}</td>
-                    <td>{{ s.status }}</td>
-                    <td>
+                    <td data-label="ID">{{ s.id }}</td>
+                    <td data-label="Name">{{ s.name }}</td>
+                    <td data-label="Status">{{ s.status }}</td>
+                    <td data-label="Actions">
                         {% if current_user.role == 'CSSD' %}
                             <form action="{{ url_for('update_status', set_id=s.id) }}" method="post" class="status-update-form">
                                 {% if s.status == 'Decontamination' %}

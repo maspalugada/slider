@@ -2,18 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>History for {{ instrument_set.name }} - CSSD SmartTrack</title>
-    <style>
-        body { font-family: sans-serif; margin: 0; background-color: #f4f6f9; }
-        .header { background-color: #007bff; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { margin: 0; font-size: 24px; }
-        .header a { color: white; text-decoration: none; }
-        .container { padding: 20px; }
-        table { width: 100%; border-collapse: collapse; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        th { background-color: #e9ecef; }
-        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; background-color: #6c757d; color: white; padding: 8px 12px; border-radius: 4px; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="header">
@@ -36,10 +27,10 @@
             <tbody>
                 {% for log in history %}
                 <tr>
-                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                    <td>{{ log.status_from }}</td>
-                    <td>{{ log.status_to }}</td>
-                    <td>{{ log.user.username }} ({{ log.user.role }})</td>
+                    <td data-label="Timestamp">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td data-label="Status From">{{ log.status_from }}</td>
+                    <td data-label="Status To">{{ log.status_to }}</td>
+                    <td data-label="Changed By">{{ log.user.username }} ({{ log.user.role }})</td>
                 </tr>
                 {% else %}
                 <tr>

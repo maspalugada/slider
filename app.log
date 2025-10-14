@@ -8,3 +8,13 @@
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 610-203-682
+2025-10-14 05:51:15,640 - INFO - No users found. Seeding database with admin user...
+2025-10-14 05:51:15,778 - INFO - Admin user created with username 'admin' and password 'admin'.
+2025-10-14 05:51:15,798 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.0.2:8080
+2025-10-14 05:51:15,798 - INFO - [33mPress CTRL+C to quit[0m
+2025-10-14 05:51:15,799 - INFO -  * Restarting with stat
+2025-10-14 05:51:53,983 - WARNING -  * Debugger is active!
+2025-10-14 05:51:53,983 - INFO -  * Debugger PIN: 148-452-288

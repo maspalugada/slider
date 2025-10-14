@@ -29,20 +29,20 @@
         <h2>Dashboard</h2>
         <div class="dashboard-summary">
             <div class="summary-card">
-                <h3>Decontamination</h3>
-                <p>{{ status_summary.get('Decontamination', 0) }}</p>
+                <h3>{{ status_decon }}</h3>
+                <p>{{ status_summary.get(status_decon, 0) }}</p>
             </div>
             <div class="summary-card">
-                <h3>Sterilized</h3>
-                <p>{{ status_summary.get('Sterilized', 0) }}</p>
+                <h3>{{ status_ster }}</h3>
+                <p>{{ status_summary.get(status_ster, 0) }}</p>
             </div>
             <div class="summary-card">
-                <h3>Ready for Distribution</h3>
-                <p>{{ status_summary.get('Ready for Distribution', 0) }}</p>
+                <h3>{{ status_dist }}</h3>
+                <p>{{ status_summary.get(status_dist, 0) }}</p>
             </div>
             <div class="summary-card">
-                <h3>In Use</h3>
-                <p>{{ status_summary.get('In Use', 0) }}</p>
+                <h3>{{ status_use }}</h3>
+                <p>{{ status_summary.get(status_use, 0) }}</p>
             </div>
         </div>
 
@@ -63,16 +63,16 @@
                     <td data-label="Name">{{ s.name }}</td>
                     <td data-label="Status">{{ s.status }}</td>
                     <td data-label="Actions">
-                        {% if current_user.role == 'CSSD' %}
+                        {% if current_user.role == ROLE_CSSD %}
                             <form action="{{ url_for('update_status', set_id=s.id) }}" method="post" class="status-update-form">
-                                {% if s.status == 'Decontamination' %}
-                                    <button type="submit" name="status" value="Sterilized" class="action-button">Mark Sterilized</button>
-                                {% elif s.status == 'Sterilized' %}
-                                    <button type="submit" name="status" value="Ready for Distribution" class="action-button">Mark Ready</button>
-                                {% elif s.status == 'Ready for Distribution' %}
-                                    <button type="submit" name="status" value="In Use" class="action-button">Mark In Use</button>
-                                {% elif s.status == 'In Use' %}
-                                     <button type="submit" name="status" value="Decontamination" class="action-button">Mark for Decontamination</button>
+                                {% if s.status == status_decon %}
+                                    <button type="submit" name="status" value="{{ status_ster }}" class="action-button">Mark Sterilized</button>
+                                {% elif s.status == status_ster %}
+                                    <button type="submit" name="status" value="{{ status_dist }}" class="action-button">Mark Ready</button>
+                                {% elif s.status == status_dist %}
+                                    <button type="submit" name="status" value="{{ status_use }}" class="action-button">Mark In Use</button>
+                                {% elif s.status == status_use %}
+                                     <button type="submit" name="status" value="{{ status_decon }}" class="action-button">Mark for Decontamination</button>
                                 {% endif %}
                             </form>
                         {% endif %}
@@ -83,7 +83,7 @@
             </tbody>
         </table>
 
-        {% if current_user.role == 'CSSD' %}
+        {% if current_user.role == ROLE_CSSD %}
         <div class="action-form-container">
             <h2>Actions</h2>
             <div style="display: flex; gap: 1rem; align-items: center;">

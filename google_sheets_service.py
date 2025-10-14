@@ -1,6 +1,7 @@
 import os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # Define the scope for the Google Sheets API
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -28,51 +29,61 @@ def get_sheets_service():
 def read_sheet(spreadsheet_id, range_name):
     """
     Reads data from a Google Sheet.
-    Returns a list of lists containing the cell values.
+    Returns a tuple: (values, error_message).
     """
     try:
         service = get_sheets_service()
         sheet = service.spreadsheets()
         result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
         values = result.get('values', [])
-        return values
+        return values, None
+    except HttpError as e:
+        error_message = f"Google Sheets API Error: {e.reason} (Code: {e.status_code})"
+        if e.status_code == 404:
+            error_message = "Spreadsheet not found. Please check the Spreadsheet ID."
+        elif e.status_code == 403:
+            error_message = "Permission denied. Make sure the service account has access to the sheet."
+        print(error_message)
+        return None, error_message
     except Exception as e:
-        print(f"An error occurred while reading the sheet: {e}")
-        return None
+        print(f"An unexpected error occurred: {e}")
+        return None, "An unexpected error occurred while reading the sheet."
 
 def write_to_sheet(spreadsheet_id, values):
     """
     Writes data to a Google Sheet.
-    Assumes writing starts from the first cell (A1).
+    Returns a tuple: (success, error_message).
     """
     try:
         service = get_sheets_service()
-        body = {
-            'values': values
-        }
-        # The range is not specified here, so it defaults to the sheet's dimensions
+        body = {'values': values}
         result = service.spreadsheets().values().update(
             spreadsheetId=spreadsheet_id, range='A1',
             valueInputOption='USER_ENTERED', body=body).execute()
         print(f"{result.get('updatedCells')} cells updated.")
-        return True
+        return True, None
+    except HttpError as e:
+        error_message = f"Google Sheets API Error: {e.reason} (Code: {e.status_code})"
+        print(error_message)
+        return False, error_message
     except Exception as e:
-        print(f"An error occurred while writing to the sheet: {e}")
-        return False
+        print(f"An unexpected error occurred: {e}")
+        return False, "An unexpected error occurred while writing to the sheet."
 
 def create_new_sheet(title):
     """
-    Creates a new Google Sheet and returns its ID and URL.
+    Creates a new Google Sheet.
+    Returns a tuple: (spreadsheet_id, spreadsheet_url, error_message).
     """
     try:
         service = get_sheets_service()
-        spreadsheet = {
-            'properties': {
-                'title': title
-            }
-        }
+        spreadsheet = {'properties': {'title': title}}
         spreadsheet = service.spreadsheets().create(body=spreadsheet, fields='spreadsheetId,spreadsheetUrl').execute()
-        return spreadsheet.get('spreadsheetId'), spreadsheet.get('spreadsheetUrl')
+        return spreadsheet.get('spreadsheetId'), spreadsheet.get('spreadsheetUrl'), None
+    except HttpError as e:
+        error_message = f"Google Sheets API Error: {e.reason} (Code: {e.status_code})"
+        print(error_message)
+        return None, None, error_message
     except Exception as e:
-        print(f"An error occurred while creating the sheet: {e}")
-        return None, None
+        print(f"An unexpected error occurred: {e}")
+        return None, None, "An unexpected error occurred while creating the sheet."

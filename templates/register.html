@@ -30,9 +30,9 @@
             <div class="form-group">
                 <label for="role">Role</label>
                 <select id="role" name="role">
-                    <option value="CSSD">CSSD Staff</option>
-                    <option value="Unit">Unit User</option>
-                    <option value="Management">Management</option>
+                    {% for role in roles %}
+                    <option value="{{ role }}">{{ role.replace('_', ' ')|title }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <button type="submit" class="action-button">Register</button>

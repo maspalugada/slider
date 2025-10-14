@@ -1,0 +1,11 @@
+# IDE and environment files
+.idea/
+.vscode/
+*.pyc
+__pycache__/
+
+# Credentials
+credentials.json
+
+# Instance folder
+instance/

@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import google_sheets_service as sheets
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cssd_database.db'
@@ -152,6 +153,91 @@ def set_history(set_id):
     instrument_set = InstrumentSet.query.get_or_404(set_id)
     history = SterilizationCycle.query.filter_by(set_id=set_id).order_by(SterilizationCycle.timestamp.desc()).all()
     return render_template('set_history.html', instrument_set=instrument_set, history=history)
+
+@app.route('/import', methods=['GET', 'POST'])
+@login_required
+def import_from_sheet():
+    if current_user.role != 'CSSD':
+        flash('You are not authorized to perform this action.')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        spreadsheet_id = request.form['spreadsheet_id']
+        range_name = request.form['range_name']
+
+        try:
+            values = sheets.read_sheet(spreadsheet_id, range_name)
+            if values is None:
+                flash('Failed to read data from Google Sheet. Check credentials and permissions.')
+                return redirect(url_for('import_from_sheet'))
+
+            imported_count = 0
+            for row in values:
+                if not row: continue # Skip empty rows
+                set_name = row[0]
+
+                # Check if set already exists
+                existing_set = InstrumentSet.query.filter_by(name=set_name).first()
+                if not existing_set:
+                    new_set = InstrumentSet(name=set_name)
+                    db.session.add(new_set)
+                    imported_count += 1
+
+            db.session.commit()
+            flash(f'Successfully imported {imported_count} new instrument sets.')
+            return redirect(url_for('index'))
+
+        except Exception as e:
+            flash(f'An error occurred: {e}')
+            return redirect(url_for('import_from_sheet'))
+
+    return render_template('import.html')
+
+@app.route('/export')
+@login_required
+def export_to_sheet():
+    try:
+        # 1. Fetch all data
+        all_sets = InstrumentSet.query.all()
+
+        # 2. Prepare data for export
+        header = ['Set ID', 'Set Name', 'Current Status', 'Last Update', 'User', 'Action']
+        data_to_export = [header]
+
+        for s in all_sets:
+            last_cycle = SterilizationCycle.query.filter_by(set_id=s.id).order_by(SterilizationCycle.timestamp.desc()).first()
+            if last_cycle:
+                row = [
+                    s.id,
+                    s.name,
+                    s.status,
+                    last_cycle.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                    last_cycle.user.username,
+                    f"From '{last_cycle.status_from}' to '{last_cycle.status_to}'"
+                ]
+                data_to_export.append(row)
+            else:
+                data_to_export.append([s.id, s.name, s.status, 'No history', '', ''])
+
+        # 3. Create a new Google Sheet
+        from datetime import datetime
+        sheet_title = f"CSSD_Export_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        spreadsheet_id, spreadsheet_url = sheets.create_new_sheet(sheet_title)
+
+        if not spreadsheet_id:
+            flash('Could not create a new Google Sheet. Please check API credentials and permissions.')
+            return redirect(url_for('index'))
+
+        # 4. Write data to the new sheet
+        sheets.write_to_sheet(spreadsheet_id, data_to_export)
+
+        flash(f'Successfully exported data. <a href="{spreadsheet_url}" target="_blank">Open Google Sheet</a>', 'success')
+
+    except Exception as e:
+        flash(f'An error occurred during export: {e}', 'error')
+
+    return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     with app.app_context():

@@ -1,81 +1,57 @@
+from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 import os
-import shutil
-from flask import Flask, request, render_template, jsonify, send_from_directory
-from werkzeug.utils import secure_filename
-import subprocess
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['OUTPUT_FOLDER'] = 'output'
-app.config['ALLOWED_EXTENSIONS'] = {'mp3', 'wav', 'ogg'}
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cssd_database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'your_secret_key' # Change this in production
 
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+db = SQLAlchemy(app)
 
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+# Database Models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    role = db.Column(db.String(50), nullable=False)  # e.g., 'CSSD', 'Unit', 'Management'
+
+class InstrumentSet(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    status = db.Column(db.String(50), default='Decontamination')  # e.g., 'Decontamination', 'Sterilized', 'In Use'
+
+class SterilizationCycle(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.Integer, db.ForeignKey('instrument_set.id'), nullable=False)
+    instrument_set = db.relationship('InstrumentSet', backref=db.backref('cycles', lazy=True))
+    timestamp = db.Column(db.DateTime, server_default=db.func.now())
+    status_from = db.Column(db.String(50))
+    status_to = db.Column(db.String(50))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User', backref=db.backref('actions', lazy=True))
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    sets = InstrumentSet.query.all()
+    return render_template('index.html', sets=sets)
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'Tidak ada file yang diunggah'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Tidak ada file yang dipilih'}), 400
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+@app.route('/set', methods=['POST'])
+def add_set():
+    name = request.form['name']
+    new_set = InstrumentSet(name=name)
+    db.session.add(new_set)
+    db.session.commit()
+    return redirect(url_for('index'))
 
-        output_path = app.config['OUTPUT_FOLDER']
-
-        # Perintah Demucs
-        demucs_command = [
-            'python3', '-m', 'demucs',
-            '--out', output_path,
-            filepath
-        ]
-
-        try:
-            result = subprocess.run(demucs_command, check=True, capture_output=True, text=True)
-            print("Output Demucs:", result.stdout)
-        except subprocess.CalledProcessError as e:
-            print("Error Demucs:", e.stderr)
-            return jsonify({'error': 'Gagal memproses file audio.', 'details': e.stderr}), 500
-        except FileNotFoundError:
-            print("Perintah Demucs tidak ditemukan.")
-            return jsonify({'error': 'Perintah Demucs tidak ditemukan. Pastikan demucs terinstal.'}), 500
-
-        # Cari file output
-        filename_without_ext = os.path.splitext(filename)[0]
-        # Jalur output demucs default adalah <output_path>/htdemucs/<filename_without_ext>/
-        processed_folder = os.path.join(output_path, 'htdemucs', filename_without_ext)
-
-        stems = []
-        if os.path.exists(processed_folder):
-            for stem_file in sorted(os.listdir(processed_folder)):
-                if stem_file.endswith('.wav'):
-                    stems.append({
-                        'name': os.path.splitext(stem_file)[0].capitalize(),
-                        'path': f'/output/htdemucs/{filename_without_ext}/{stem_file}'
-                    })
-        else:
-            return jsonify({'error': 'Tidak dapat menemukan file yang diproses. Demucs mungkin gagal secara diam-diam.'}), 500
-
-        return jsonify({'stems': stems})
-
-    return jsonify({'error': 'Tipe file tidak diizinkan'}), 400
-
-# Rute baru untuk menyajikan file dari subdirektori dinamis demucs
-@app.route('/output/htdemucs/<path:folder>/<path:filename>')
-def serve_demucs_output_file(folder, filename):
-    directory = os.path.join(app.config['OUTPUT_FOLDER'], 'htdemucs', folder)
-    return send_from_directory(directory, filename)
+@app.route('/update_status/<int:set_id>', methods=['POST'])
+def update_status(set_id):
+    new_status = request.form['status']
+    instrument_set = InstrumentSet.query.get(set_id)
+    instrument_set.status = new_status
+    db.session.commit()
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True, host='0.0.0.0', port=8080)

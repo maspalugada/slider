@@ -1,37 +1,55 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pemisah Audio</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>CSSD SmartTrack</title>
+    <style>
+        body { font-family: sans-serif; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .container { max-width: 800px; margin: auto; padding: 20px; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Pemisah Audio</h1>
-        <p>Unggah file audio (MP3, WAV, OGG) untuk memisahkannya menjadi vokal, drum, bass, dan instrumen lainnya.</p>
+        <h1>Instrument Sets</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Update Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sets %}
+                <tr>
+                    <td>{{ s.id }}</td>
+                    <td>{{ s.name }}</td>
+                    <td>{{ s.status }}</td>
+                    <td>
+                        <form action="{{ url_for('update_status', set_id=s.id) }}" method="post">
+                            <select name="status">
+                                <option value="Decontamination">Decontamination</option>
+                                <option value="Sterilized">Sterilized</option>
+                                <option value="In Use">In Use</option>
+                            </select>
+                            <button type="submit">Update</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-        <form id="upload-form" enctype="multipart/form-data">
-            <input type="file" id="file-input" name="file" accept=".mp3,.wav,.ogg" required>
-            <button type="submit">Pisahkan Audio</button>
+        <h2>Add New Set</h2>
+        <form action="{{ url_for('add_set') }}" method="post">
+            <label for="name">Set Name:</label>
+            <input type="text" id="name" name="name" required>
+            <button type="submit">Add Set</button>
         </form>
-
-        <div id="status" class="hidden">
-            <p id="status-text">Memproses... ini mungkin memakan waktu beberapa menit.</p>
-            <div class="loader"></div>
-        </div>
-
-        <div id="results" class="hidden">
-            <h2>Hasil</h2>
-            <div id="stems-container"></div>
-        </div>
-
-        <div id="error" class="hidden">
-            <h2>Error</h2>
-            <p id="error-message"></p>
-        </div>
     </div>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

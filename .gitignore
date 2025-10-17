@@ -9,3 +9,6 @@ credentials.json
 
 # Instance folder
 instance/
+
+# Uploaded Excel files
+excel_uploads/

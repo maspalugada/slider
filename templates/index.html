@@ -93,8 +93,9 @@
                     <button type="submit" class="action-button">Add</button>
                 </form>
                 <span>or</span>
-                <a href="{{ url_for('import_from_sheet') }}" class="action-button view">Import from Google Sheets</a>
-                <a href="{{ url_for('export_to_sheet') }}" class="action-button export">Export All to Google Sheets</a>
+                <a href="{{ url_for('import_from_sheet') }}" class="action-button view">Import from Sheets</a>
+                <a href="{{ url_for('upload_excel') }}" class="action-button view" style="background-color: #28a745;">Import from Excel</a>
+                <a href="{{ url_for('export_to_sheet') }}" class="action-button export">Export to Sheets</a>
             </div>
         </div>
         {% endif %}

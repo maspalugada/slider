@@ -2,13 +2,17 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import os
 import google_sheets_service as sheets
+import pandas as pd
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cssd_database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your_secret_key' # Change this in production
+app.config['UPLOAD_FOLDER'] = 'excel_uploads'
+app.config['ALLOWED_EXTENSIONS'] = {'xlsx'}
 
 # --- Constants ---
 # User Roles
@@ -276,6 +280,69 @@ def seed_database():
         db.session.add(admin_user)
         db.session.commit()
         print("Admin user created with username 'admin' and password 'admin'.")
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+@app.route('/upload_excel', methods=['GET', 'POST'])
+@login_required
+def upload_excel():
+    if current_user.role != ROLE_CSSD:
+        flash('You are not authorized to perform this action.', 'error')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file part in the request.', 'error')
+            return redirect(request.url)
+
+        file = request.files['file']
+
+        if file.filename == '':
+            flash('No file selected.', 'error')
+            return redirect(request.url)
+
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+
+            try:
+                df = pd.read_excel(filepath)
+
+                if df.empty or df.columns.empty:
+                    flash('Excel file is empty or has no columns.', 'error')
+                    return redirect(request.url)
+
+                # Assume the first column contains the instrument set names
+                set_names = df.iloc[:, 0]
+
+                imported_count = 0
+                for name in set_names:
+                    if pd.isna(name): continue # Skip empty cells
+
+                    name = str(name).strip()
+                    if not name: continue # Skip empty strings
+
+                    existing_set = InstrumentSet.query.filter_by(name=name).first()
+                    if not existing_set:
+                        new_set = InstrumentSet(name=name)
+                        db.session.add(new_set)
+                        imported_count += 1
+
+                db.session.commit()
+                flash(f'Successfully imported {imported_count} new instrument sets from {filename}.', 'success')
+                return redirect(url_for('index'))
+
+            except Exception as e:
+                flash(f'An error occurred while processing the Excel file: {e}', 'error')
+                return redirect(request.url)
+        else:
+            flash('Invalid file type. Please upload a .xlsx file.', 'error')
+            return redirect(request.url)
+
+    return render_template('upload_excel.html')
 
 if __name__ == '__main__':
     with app.app_context():
